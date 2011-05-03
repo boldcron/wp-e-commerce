@@ -1,7 +1,6 @@
 <?php
 
 $_GET["sessionid"] = $_GET["sessionid"]=="" ? $_SESSION["cobredireto_id"] : $_GET["sessionid"];
-print_r($_GET["sessionid"]);
 
 $nzshpcrt_gateways[$num] = array(
     'name'            => 'BoldCron',
@@ -43,7 +42,7 @@ if($_POST){include('boldcron/retorno.php');}
 function gateway_cobredireto($seperator, $sessionid)
 {
 		global $wpdb, $wpsc_cart;
-	
+
 		// Incluindo o arquivo da biblioteca
 		include('boldcron/pagamento.php');  
 
@@ -73,15 +72,77 @@ function gateway_cobredireto($seperator, $sessionid)
 			// Adicionando produto
 			$pg->adicionar($produtos);
 		}				
-		
+        
 		$_SESSION['cobredireto_id'] = $sessionid;
+
+        // Dados do cliente
+        $_cliente = $_POST["collected_data"];
+        list($ddd,$telefone)   = splitTel($_cliente[17]);
+        
+        foreach (array ('customer'=>'CONSUMIDOR', 'billing'=>'COBRANCA', 'delivery'=>'ENTREGA') as $k=>$v) {
+            $customer=$order->$k;
+            if ($k=='billing' or $k=='customer'){
+                $street=explode(',',$_cliente[4]);            
+                $street = array_slice(array_merge($street, array("","","","")),0,4); 
+                list($rua, $numero, $complemento, $bairro) = $street;
+
+                $dados = array(
+                    'primeiro_nome' => $_cliente[2],
+                    'ultimo_nome'   => $_cliente[3],
+                    'email'         => $_cliente[8],
+                    'tel_casa'      => array(
+                        'area'    => $ddd,
+                        'numero'  => $telefone
+                    ),
+                    'cep'           => preg_replace("/[^0-9]/","", $_cliente[7]),
+                    'rua'           => $rua,
+                    'numero'        => $numero,
+                    'complemento'   => $complemento,
+                    'bairro'        => $bairro,
+                    'estado'        => $_cliente[14],
+                    'cidade'        => $_cliente[5],
+                    'pais'          => $_cliente[6][0],
+                );
+            }else{
+                $street=explode(',',$_cliente[12]);            
+                $street = array_slice(array_merge($street, array("","","","")),0,4); 
+                list($rua, $numero, $complemento, $bairro) = $street;
+
+                $dados = array(
+                    'primeiro_nome' => $_cliente[10],
+                    'ultimo_nome'   => $_cliente[11],
+                    'email'         => $_cliente[8],
+                    'tel_casa'      => array(
+                        'area'    => $ddd,
+                        'numero'  => $telefone
+                    ),
+                    'cep'           => preg_replace("/[^0-9]/","", $_cliente[16]),
+                    'rua'           => $rua,
+                    'numero'        => $numero,
+                    'complemento'   => $complemento,
+                    'bairro'        => $bairro,
+                    'estado'        => $_cliente[14],
+                    'cidade'        => $_cliente[13],
+                    'pais'          => $_cliente[6][0],
+                );
+            }
+            $pg->endereco($dados, $v);
+        }
+		
 		// Cria a compra junto ao CobreDireto e redireciona o usuário  
 		var_dump($pg->pagar()); 
 		// Esvazia o carrinho 
 		$wpsc_cart->empty_cart();
 		exit;		
 }
-
+function splitTel($tel){
+  $tel=preg_replace('/[a-w]+.*/','',$tel);
+  $numeros=preg_replace('/\D/','',$tel);
+  $telefone=substr($numeros,sizeof($numeros)-9);
+  $ddd=substr($numeros,sizeof($numeros)-11,2);
+  $retorno=array($ddd,$telefone);
+  return $retorno;
+}
 /**
  * Cria o formulário de cadastro de opções do módulo de pagamento
  *
