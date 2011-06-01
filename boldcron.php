@@ -123,7 +123,7 @@ function gateway_cobredireto($seperator, $sessionid)
                     'bairro'        => $bairro,
                     'estado'        => $_cliente[14],
                     'cidade'        => $_cliente[13],
-                    'pais'          => $_cliente[6][0],
+                    'pais'          => $_cliente[15],
                 );
             }
             $pg->endereco($dados, $v);
